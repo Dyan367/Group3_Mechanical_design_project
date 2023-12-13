@@ -1,9 +1,11 @@
 clear all
 clc
 
-
+%%
 Plate_thickness = 0.006;
-
+%%
+% This section defines the initial values for the optimization loop and the
+% step size for the for loop
 Start_h_angled = 0.46;
 End_h_angled = 0.46;
 Stepsize_h_angled = 0.01;
@@ -65,6 +67,7 @@ h_verticle= Start_h_verticle;
 L_notch_input = Start_L_notch;
 h_notch= Start_h_notch;
 
+%% here starts the loop which iterates over every dimension possible
 for i = 1:steps
 h_angled = h_angled+Stepsize_h_angled;
 if h_angled>End_h_angled
@@ -90,26 +93,14 @@ if h_angled>End_h_angled
 end
 D =h_notch/((0.5));
 L_notch = L_notch_input + D/2;
-%i = 0;
-%for Beam_size = Start_h_angled:Stepsize_h_angled:End_h_angled
-%    i = i+1;
 
-%Chosen Parameters (to be optimised)
-% h_angled= 0.46;
-% w_verticle= 0.46;
-% h_verticle= 0.46;
-% L_notch = 0.1;
-% h_notch= Beam_size;
 
 %Parameters dependent on above variables
 phi = atan((0.5-0.5*h_verticle)/(2-0.5*w_verticle -2*L_notch));
 w_angled= h_verticle*cos(phi);
 
 
-% for L_h = Start_L_h:StepsizeL:End_L_h
-%     i = 0;
-%     for H_h = Start_H_h:StepsizeH:End_H_h
-%         i = i+1;
+
 %% C-arm params
 g=9.81;
 m_carm=500;
@@ -117,10 +108,11 @@ Load = m_carm*g;
 dist_to_poi = 1;
 
 %% Verticle beam params
+% This section defines all kinematics of the beams
 t_verticle= Plate_thickness;
 E_verticle = 210e9; %Pa
 A_verticle= w_verticle*h_verticle-(w_verticle-2*t_verticle)*(h_verticle-2*t_verticle); %m^2
-L_verticle= 1.55 + 0.5*h_angled;   %m
+L_verticle= 1.75 + 0.5*h_angled;   %m
 Ix_verticle = (1/12)*(w_verticle)*(h_verticle^3) - (1/12)*(w_verticle-2*t_verticle)*(h_verticle-2*t_verticle)^3;
 Iy_verticle = (1/12)*(h_verticle)*(w_verticle^3) - (1/12)*(h_verticle-2*t_verticle)*(w_verticle-2*t_verticle)^3;
 rho_verticle = 7800;
@@ -144,12 +136,10 @@ U_verticle = (0.5*My_verticle^2 )/Ky_verticle + (0.5*Mx_verticle^2 )/Kx_verticle
 
 %% --------------------------------------------------------------------------------
 %% Notch flexure params
-%D =h_notch/((0.5+0.01)/2);
 d1=D;
 d2= d1;
-%L_notch=0.1;
-t_notch=h_angled;
-%D=(2*d1^2)/(2d1);
+t_notch=h_angled; 
+
 %% Ratio of notch holes to width: must be 0.01<beta<0.5
 
 beta = h_notch/D;
@@ -218,11 +208,10 @@ Fz_angled = Load + (m_verticle + m_notch)*g;
 Mx_angled = Load*(dist_to_poi+0.5*h_verticle);
 My_angled = Load*(0.2+0.5*w_verticle+2*L_notch) +(0.5*w_verticle+2*L_notch)*m_verticle*g + m_notch*L_notch*g;
 
-% M_total = sqrt(Mx_angled^2 +My_angled^2)
 
+% New moments acting on
 Mx_new = Mx_angled*cos(phi) +My_angled*sin(phi);
 My_new = -Mx_angled*sin(phi) +My_angled*cos(phi);
-% M_total_new =  sqrt(Mx_new^2 +My_new^2)
 
 
 %% Potential energy of Angled beam
@@ -236,7 +225,7 @@ U = [U_angled, U_verticle, U_notch];
 U1=U;
 U=sum(U);
 %% Total stiffness
-%U_notch
+
 c_total = (0.5*Load^2)/U;
 
  %% mass calculations
@@ -254,6 +243,7 @@ m_notch = ( w_verticle*h_angled*(L_notch-d1/2) + ...
 Mass = m_notch + m_verticle + m_angled + m_y_rotation + plates;
 
 %% mass over stiffness
+% Stores the loop results into arrays
 masses(i) = Mass;
 Volumes(i) = m_notch/rho_notch + w_verticle*h_verticle*L_verticle +w_angled*h_angled*L_angled;
 stiffnesses(i) = c_total;%[c_total, h_angled, w_verticle, h_verticle, L_notch ,h_notch];
@@ -271,74 +261,77 @@ L_angled_list(i) = L_angled;
 end
 %%
 X_axis = linspace(1,steps,steps);
-%%
-close all;
-X_axis2 = X_axis(1,1:100);
-ratios2 = ratios(1,1:100);
-figure()
-hold on
-xlim([0 max(masses)])
-xlabel('Mass (Kg)')
-ylim([0 max(stiffnesses)])
-ylabel('Stiffness (Pa)')
-plot(masses,stiffnesses)
-hold off
-
-figure()
-hold on
-title("W_{verticle} variation")
-%xlim([0 max(sizes)])
-ylabel('Stiffness/mass')
-%ylim([0 max(ratios)])
-xlabel('W_{verticle} (m)')
-plot(sizes,ratios)
-hold off
-figure()
-hold on
-title('Stiffness/mass variation')
-%xlim([0 max(sizes)])
-ylabel('Stiffness/mass')
-%ylim([0 max(ratios)])
-xlabel('Tests')
-plot(X_axis,ratios)%ratios(1,:))
-hold off
-print("finished")
-
-figure()
-hold on
-%xlim([0 max(sizes)])
-title('Mass variation')
-ylabel('Mass')
-%ylim([0 max(ratios)])
-xlabel('Tests')
-plot(X_axis,masses)%ratios(1,:))
-hold off
-print("finished")
-
-figure()
-hold on
-%xlim([0 max(sizes)])
-title('Stiffness variation')
-ylabel('Stiffness')
-%ylim([0 max(ratios)])
-xlabel('Tests')
-plot(X_axis,stiffnesses)%ratios(1,:))
-hold off
-print("finished")
-
-figure()
-hold on
-%xlim([0 max(sizes)])
-title('Volume variation')
-ylabel('Volume')
-%ylim([0 max(ratios)])
-xlabel('Tests')
-plot(Volumes,ratios)%ratios(1,:))
-hold off
-print("finished")
+%% PLOTS
+% close all;
+% X_axis2 = X_axis(1,1:100);
+% ratios2 = ratios(1,1:100);
+% figure()
+% hold on
+% xlim([0 max(masses)])
+% xlabel('Mass (Kg)')
+% ylim([0 max(stiffnesses)])
+% ylabel('Stiffness (Pa)')
+% plot(masses,stiffnesses)
+% hold off
+% 
+% figure()
+% hold on
+% title("W_{verticle} variation")
+% %xlim([0 max(sizes)])
+% ylabel('Stiffness/mass')
+% %ylim([0 max(ratios)])
+% xlabel('W_{verticle} (m)')
+% plot(sizes,ratios)
+% hold off
+% figure()
+% hold on
+% title('Stiffness/mass variation')
+% %xlim([0 max(sizes)])
+% ylabel('Stiffness/mass')
+% %ylim([0 max(ratios)])
+% xlabel('Tests')
+% plot(X_axis,ratios)%ratios(1,:))
+% hold off
+% print("finished")
+% 
+% figure()
+% hold on
+% %xlim([0 max(sizes)])
+% title('Mass variation')
+% ylabel('Mass')
+% %ylim([0 max(ratios)])
+% xlabel('Tests')
+% plot(X_axis,masses)%ratios(1,:))
+% hold off
+% print("finished")
+% 
+% figure()
+% hold on
+% %xlim([0 max(sizes)])
+% title('Stiffness variation')
+% ylabel('Stiffness')
+% %ylim([0 max(ratios)])
+% xlabel('Tests')
+% plot(X_axis,stiffnesses)%ratios(1,:))
+% hold off
+% print("finished")
+% 
+% figure()
+% hold on
+% %xlim([0 max(sizes)])
+% title('Volume variation')
+% ylabel('Volume')
+% %ylim([0 max(ratios)])
+% xlabel('Tests')
+% plot(Volumes,ratios)%ratios(1,:))
+% hold off
+% print("finished")
 
 Dimensions = [w_angled_list;h_angled_list;w_verticle_list;h_verticle_list;L_notch_list;h_notch_list;phi_list;L_verticle_list;L_angled_list];
 
+% best is the index where the stiffness over mass (ratios) is maximum
+% This is fed back into the dimension arrays to get out the optimal
+% dimensions
 best = find(ratios == max(ratios))
 best_w_angled = w_angled_list(best)
 best_h_angled = h_angled_list(best)
